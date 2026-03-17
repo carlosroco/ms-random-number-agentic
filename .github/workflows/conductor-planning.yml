@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       contains(
-        fromJson('["copilot", "copilot[bot]", "github-copilot[bot]", "github-copilot"]'),
+        fromJson('["copilot", "copilot[bot]", "github-copilot[bot]", "github-copilot", "Copilot"]'),
         github.event.assignee.login
       )
 
@@ -37,11 +37,13 @@ jobs:
               issueBody,
             ].join('\n');
 
-            // ─── Planning Subagent: Desglose de actividades de desarrollo ───────────
-            // Cada sub-issue representa una actividad específica del ciclo de desarrollo.
+            // ─── Definición de sub-issues por el planning-subagent ───────────────────
+            // dev: true  → se asignará a Copilot (@dev-subagent)
+            // dev: false → solo se crea, no se aborda
             const subIssues = [
               {
                 title: `[Setup] Estructura inicial y configuración del proyecto`,
+                dev: true,
                 body: [
                   `## 🏗️ Actividad: Setup del Proyecto`,
                   ``,
@@ -58,6 +60,7 @@ jobs:
               },
               {
                 title: `[Service] Implementar la lógica de negocio principal`,
+                dev: true,
                 body: [
                   `## ⚙️ Actividad: Servicio de Negocio`,
                   ``,
@@ -74,6 +77,7 @@ jobs:
               },
               {
                 title: `[Controller] Exponer el endpoint o interfaz de entrada`,
+                dev: true,
                 body: [
                   `## 🌐 Actividad: Controlador / Punto de Entrada`,
                   ``,
@@ -90,6 +94,7 @@ jobs:
               },
               {
                 title: `[Tests] Agregar tests unitarios y de integración`,
+                dev: false,
                 body: [
                   `## 🧪 Actividad: Testing`,
                   ``,
@@ -106,6 +111,7 @@ jobs:
               },
               {
                 title: `[Docs] Documentar uso y pruebas manuales`,
+                dev: false,
                 body: [
                   `## 📄 Actividad: Documentación`,
                   ``,
@@ -122,7 +128,7 @@ jobs:
               },
             ];
 
-            // ─── Crear cada sub-issue y enlazarlo como hijo del issue padre ──────────
+            // ─── Crear cada sub-issue, enlazarlo y asignar los de desarrollo ──────────
             const createdIssues = [];
             for (const subIssue of subIssues) {
               const created = await github.rest.issues.create({
@@ -132,11 +138,10 @@ jobs:
                 body: subIssue.body,
                 labels: ['sub-issue'],
               });
-              createdIssues.push(created.data);
+              createdIssues.push({ ...created.data, dev: subIssue.dev });
               core.info(`Sub-issue creado: #${created.data.number} — ${subIssue.title}`);
 
-              // ─── Establecer la relación parent-child vía la API de Sub-Issues ──────
-              // La API requiere el ID interno del issue (created.data.id), no el número visible.
+              // ─── Relación padre-hijo nativa ───────────────────────────────────────
               try {
                 await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues', {
                   owner,
@@ -148,12 +153,31 @@ jobs:
               } catch (err) {
                 core.warning(`No se pudo establecer la relación padre-hijo para #${created.data.number}: ${err.message}`);
               }
+
+              // ─── Asignar a Copilot solo los sub-issues de desarrollo ──────────────
+              if (subIssue.dev) {
+                try {
+                  await github.rest.issues.addAssignees({
+                    owner,
+                    repo,
+                    issue_number: created.data.number,
+                    assignees: ['copilot'],
+                  });
+                  core.info(`Sub-issue #${created.data.number} asignado a Copilot (@dev-subagent)`);
+                } catch (err) {
+                  core.warning(`No se pudo asignar Copilot al sub-issue #${created.data.number}: ${err.message}`);
+                }
+              } else {
+                core.info(`Sub-issue #${created.data.number} NO asignado (${subIssue.title} — fuera del scope de desarrollo)`);
+              }
             }
 
-            // ─── Publicar comentario resumen en el issue padre ─────────────────────
-            const subIssueList = createdIssues
-              .map((i) => `- #${i.number} — ${i.title}`)
-              .join('\n');
+            // ─── Comentario resumen en el issue padre ─────────────────────────────
+            const devIssues = createdIssues.filter(i => i.dev);
+            const pendingIssues = createdIssues.filter(i => !i.dev);
+
+            const devList = devIssues.map(i => `- #${i.number} — ${i.title} ✅ asignado a @dev-subagent`).join('\n');
+            const pendingList = pendingIssues.map(i => `- #${i.number} — ${i.title} ⏸️ pendiente (fuera de scope)`).join('\n');
 
             await github.rest.issues.createComment({
               owner,
@@ -162,10 +186,15 @@ jobs:
               body: [
                 `## 🗺️ Planning Subagent — Roadmap de Actividades`,
                 ``,
-                `El **planning-subagent** ha analizado el issue y generado las siguientes sub-issues de desarrollo:`,
+                `El **@planning-subagent** ha analizado el issue y generado las sub-issues de desarrollo.`,
+                `El **@conductor** ha delegado las tareas de implementación al **@dev-subagent**.`,
                 ``,
-                subIssueList,
+                `### ☕ Sub-issues de Desarrollo (asignadas a @dev-subagent)`,
+                devList,
                 ``,
-                `> Cada sub-issue contiene las tareas específicas necesarias para completar esta actividad.`,
+                `### ⏸️ Sub-issues fuera de scope (no abordadas)`,
+                pendingList,
+                ``,
+                `> Cada sub-issue de desarrollo será implementada por el **@dev-subagent** usando el skill \`java-springboot\`.`,
               ].join('\n'),
             });

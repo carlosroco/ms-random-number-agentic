@@ -2,10 +2,11 @@ name: Dev Subagent — Java Spring Boot
 
 # Skill: java-springboot
 # Handles sub-issues: [Setup], [Service], [Controller]
+# Triggered when a dev sub-issue is assigned to Copilot by the conductor
 
 on:
   issues:
-    types: [labeled]
+    types: [assigned]
 
 permissions:
   issues: write
@@ -15,7 +16,10 @@ jobs:
     name: Dev Subagent - Java Spring Boot
     runs-on: ubuntu-latest
     if: |
-      github.event.label.name == 'sub-issue' &&
+      contains(
+        fromJson('["copilot", "copilot[bot]", "github-copilot[bot]", "github-copilot", "Copilot"]'),
+        github.event.assignee.login
+      ) &&
       (
         startsWith(github.event.issue.title, '[Setup]') ||
         startsWith(github.event.issue.title, '[Service]') ||
@@ -26,7 +30,7 @@ jobs:
       - name: Checkout repositorio
         uses: actions/checkout@v4
 
-      - name: Generar código Java Spring Boot
+      - name: Asignar sub-issue de desarrollo al @dev-subagent (Copilot)
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -38,61 +42,52 @@ jobs:
             const issueTitle = issue.title;
             const { owner, repo } = context.repo;
 
-            // ─── Asignar el issue a Copilot ──────────────────────────────────────────
-            await github.rest.issues.addAssignees({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              assignees: ['Copilot'],
-            });
-            core.info(`Issue #${issueNumber} asignado a Copilot`);
-
-            // ─── Leer SKILL.md y extraer la sección correspondiente ──────────────────
+            // ─── Leer SKILL.md de java-springboot ────────────────────────────────────
             const skillContent = fs.readFileSync('./.github/skills/java-springboot/SKILL.md', 'utf8');
-            // Strip YAML frontmatter (content between first two '---' lines)
             const bodyMatch = skillContent.match(/^---[\s\S]*?---\n([\s\S]*)$/);
             const skillBody = bodyMatch ? bodyMatch[1].trim() : skillContent;
 
-            // Detect task type and extract matching section (## [Setup], ## [Service], ## [Controller])
+            // ─── Extraer la sección correspondiente al tipo de tarea ─────────────────
             let taskName = '';
             let taskPrefix = '';
-            if (issueTitle.startsWith('[Setup]')) { taskName = 'Setup'; taskPrefix = '[Setup]'; }
-            else if (issueTitle.startsWith('[Service]')) { taskName = 'Service'; taskPrefix = '[Service]'; }
+            if (issueTitle.startsWith('[Setup]'))      { taskName = 'Setup';      taskPrefix = '[Setup]'; }
+            else if (issueTitle.startsWith('[Service]'))    { taskName = 'Service';    taskPrefix = '[Service]'; }
             else if (issueTitle.startsWith('[Controller]')) { taskName = 'Controller'; taskPrefix = '[Controller]'; }
 
-            let commentBody = '';
+            let commentBody = skillBody;
             if (taskName) {
               const sectionRegex = new RegExp(`(## \\[${taskName}\\][\\s\\S]*?)(?=\\n## \\[|\\n*$)`);
               const sectionMatch = skillBody.match(sectionRegex);
-              commentBody = sectionMatch ? sectionMatch[1].trim() : skillBody;
-            } else {
-              commentBody = skillBody;
+              if (sectionMatch) commentBody = sectionMatch[1].trim();
             }
 
             commentBody = [
-              `## ☕ Dev Subagent — Java Spring Boot`,
+              `## ☕ @dev-subagent — Java Spring Boot`,
               ``,
               `**Skill:** \`java-springboot\` | **Tarea:** \`${taskPrefix || issueTitle}\``,
               ``,
+              `El **@dev-subagent** ha recibido este sub-issue de desarrollo delegado por el **@conductor**.`,
+              `Implementando con el skill \`java-springboot\`...`,
+              ``,
               commentBody,
               ``,
-              `> 🤖 Generado automáticamente por el **dev-subagent** con skill \`java-springboot\``,
+              `> 🤖 Sub-issue asignado y en ejecución por el **@dev-subagent** con skill \`java-springboot\``,
             ].join('\n');
 
-            // ─── Publicar comentario con el código generado ──────────────────────────
+            // ─── Publicar comentario con el contexto del skill ────────────────────────
             await github.rest.issues.createComment({
               owner,
               repo,
               issue_number: issueNumber,
               body: commentBody,
             });
-            core.info(`Comentario publicado en el issue #${issueNumber}`);
+            core.info(`Comentario publicado en el sub-issue #${issueNumber}`);
 
-            // ─── Agregar label "in-progress" ─────────────────────────────────────────
+            // ─── Agregar label "in-progress" ──────────────────────────────────────────
             await github.rest.issues.addLabels({
               owner,
               repo,
               issue_number: issueNumber,
               labels: ['in-progress'],
             });
-            core.info(`Label "in-progress" agregado al issue #${issueNumber}`);
+            core.info(`Label "in-progress" agregado al sub-issue #${issueNumber}`);
