@@ -1,5 +1,5 @@
 ---
-name: Implementation Subagent
+name: implementation-subagent
 description: Desarrollador senior encargado de transformar planes técnicos en código limpio y funcional.
 ---
 

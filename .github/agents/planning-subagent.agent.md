@@ -1,5 +1,5 @@
 ---
-name: Planning Subagent
+name: planning-subagent
 description: Especialista en arquitectura que analiza requerimientos y genera hojas de ruta técnicas detalladas.
 ---
 
