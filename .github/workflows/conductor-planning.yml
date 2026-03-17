@@ -136,12 +136,13 @@ jobs:
               core.info(`Sub-issue creado: #${created.data.number} — ${subIssue.title}`);
 
               // ─── Establecer la relación parent-child vía la API de Sub-Issues ──────
+              // La API requiere el ID interno del issue (created.data.id), no el número visible.
               try {
                 await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues', {
                   owner,
                   repo,
                   issue_number: parentNumber,
-                  sub_issue_number: created.data.number,
+                  sub_issue_id: created.data.id,
                 });
                 core.info(`Relación padre-hijo establecida: #${parentNumber} → #${created.data.number}`);
               } catch (err) {
