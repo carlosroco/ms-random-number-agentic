@@ -12,7 +12,6 @@ Microservicio REST desarrollado en Spring Boot 3.x que expone un endpoint para o
 - Java 17
 - Spring Boot 3.4.3
 - Spring Web
-- Spring Actuator
 - JUnit 5 + Mockito
 
 ## 📋 Requisitos previos
@@ -58,15 +57,6 @@ GET http://localhost:8080/api/random
 ```bash
 curl -s http://localhost:8080/api/random
 # Respuesta: {"number":7}
-```
-
-### GET /actuator/health
-
-Verifica el estado del microservicio.
-
-```bash
-curl -s http://localhost:8080/actuator/health
-# Respuesta: {"status":"UP"}
 ```
 
 ## 🧪 Tests
