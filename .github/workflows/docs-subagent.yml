@@ -19,13 +19,18 @@ jobs:
       startsWith(github.event.issue.title, '[Docs]')
 
     steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
       - name: Generar documentación README
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const skill = require('./.github/skills/technical-documentation.skill.js');
             const issue = context.payload.issue;
             const issueNumber = issue.number;
+            const issueTitle = issue.title;
             const issueBody = issue.body || '';
             const { owner, repo } = context.repo;
 
@@ -45,65 +50,10 @@ jobs:
             const parentTitle = parentRefMatch ? parentRefMatch[2].trim() : 'Microservicio Random Number';
 
             // ─── Skill: technical-documentation — Generar README.md ─────────────────
-            const readmeContent = [
-              `# ms-random-number`,
-              ``,
-              `Microservicio Spring Boot que expone un endpoint REST para obtener un número aleatorio entre 1 y 9.`,
-              ``,
-              `## Tecnologías`,
-              ``,
-              `- Java 17`,
-              `- Spring Boot 3.x`,
-              `- Maven`,
-              ``,
-              `## Endpoint`,
-              ``,
-              `\`\`\``,
-              `GET /api/random`,
-              `Response: {"number": N}  donde N es un entero entre 1 y 9`,
-              `\`\`\``,
-              ``,
-              `## Cómo ejecutar`,
-              ``,
-              `\`\`\`bash`,
-              `./mvnw spring-boot:run`,
-              `\`\`\``,
-              ``,
-              `## Ejemplo con curl`,
-              ``,
-              `\`\`\`bash`,
-              `curl http://localhost:8080/api/random`,
-              `# {"number": 7}`,
-              `\`\`\``,
-              ``,
-              `## Tests`,
-              ``,
-              `\`\`\`bash`,
-              `./mvnw test`,
-              `\`\`\``,
-            ].join('\n');
-
-            const commentBody = [
-              `## 📄 Docs Subagent — Technical Documentation`,
-              ``,
-              `**Skill:** \`technical-documentation\` | **Tarea:** \`[Docs]\``,
-              ``,
-              `He analizado el issue y genero la documentación del microservicio. 📝`,
-              ``,
-              parentRefMatch ? `> 📌 Issue padre: #${parentNumber} — ${parentTitle}` : '',
-              ``,
-              `---`,
-              ``,
-              `### 📄 \`README.md\``,
-              ``,
-              '```markdown',
-              readmeContent,
-              '```',
-              ``,
-              `---`,
-              ``,
-              `> 🤖 Generado automáticamente por el **docs-subagent** con skill \`technical-documentation\``,
-            ].join('\n');
+            const parentRef = parentRefMatch
+              ? { number: parentNumber, title: parentTitle }
+              : null;
+            const commentBody = skill.generateReadme(issueTitle, parentRef);
 
             // ─── Publicar comentario con la documentación generada ───────────────────
             await github.rest.issues.createComment({
