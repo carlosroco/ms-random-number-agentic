@@ -1,0 +1,157 @@
+name: Conductor → Planning Subagent → Sub-Issues
+
+on:
+  issues:
+    types: [assigned]
+
+permissions:
+  issues: write
+
+jobs:
+  invoke-planning-subagent:
+    name: Planning Subagent - Generar Sub-Issues
+    runs-on: ubuntu-latest
+    if: |
+      contains(
+        fromJson('["copilot", "copilot[bot]", "github-copilot[bot]", "github-copilot"]'),
+        github.event.assignee.login
+      )
+
+    steps:
+      - name: Generar sub-issues con el planning-subagent
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const parentNumber = issue.number;
+            const issueTitle = issue.title;
+            const issueBody = issue.body || 'Sin descripción';
+            const { owner, repo } = context.repo;
+
+            // ─── Referencia al issue padre para incluir contexto en cada sub-issue ──
+            const parentRef = [
+              `**Issue padre:** #${parentNumber} — ${issueTitle}`,
+              ``,
+              `**Descripción:**`,
+              issueBody,
+            ].join('\n');
+
+            // ─── Planning Subagent: Desglose de actividades de desarrollo ───────────
+            // Cada sub-issue representa una actividad específica del ciclo de desarrollo.
+            const subIssues = [
+              {
+                title: `[Setup] Estructura inicial y configuración del proyecto`,
+                body: [
+                  `## 🏗️ Actividad: Setup del Proyecto`,
+                  ``,
+                  parentRef,
+                  ``,
+                  `### Tareas`,
+                  `- [ ] Crear la estructura base del proyecto con las dependencias necesarias`,
+                  `- [ ] Configurar el gestor de dependencias (pom.xml, build.gradle, package.json, etc.)`,
+                  `- [ ] Verificar que el proyecto compila y levanta correctamente`,
+                  ``,
+                  `---`,
+                  `> Generado automáticamente por el **planning-subagent** 🤖`,
+                ].join('\n'),
+              },
+              {
+                title: `[Service] Implementar la lógica de negocio principal`,
+                body: [
+                  `## ⚙️ Actividad: Servicio de Negocio`,
+                  ``,
+                  parentRef,
+                  ``,
+                  `### Tareas`,
+                  `- [ ] Definir la interfaz o contrato del servicio`,
+                  `- [ ] Implementar la lógica de negocio principal`,
+                  `- [ ] Registrar el servicio en el contenedor de inyección de dependencias`,
+                  ``,
+                  `---`,
+                  `> Generado automáticamente por el **planning-subagent** 🤖`,
+                ].join('\n'),
+              },
+              {
+                title: `[Controller] Exponer el endpoint o interfaz de entrada`,
+                body: [
+                  `## 🌐 Actividad: Controlador / Punto de Entrada`,
+                  ``,
+                  parentRef,
+                  ``,
+                  `### Tareas`,
+                  `- [ ] Crear el controlador o manejador de solicitudes`,
+                  `- [ ] Exponer el endpoint o interfaz definida en el requerimiento`,
+                  `- [ ] Inyectar el servicio de negocio y delegar la lógica`,
+                  ``,
+                  `---`,
+                  `> Generado automáticamente por el **planning-subagent** 🤖`,
+                ].join('\n'),
+              },
+              {
+                title: `[Tests] Agregar tests unitarios y de integración`,
+                body: [
+                  `## 🧪 Actividad: Testing`,
+                  ``,
+                  parentRef,
+                  ``,
+                  `### Tareas`,
+                  `- [ ] Crear tests unitarios para la lógica de negocio`,
+                  `- [ ] Crear tests de integración para el punto de entrada`,
+                  `- [ ] Validar casos exitosos y casos de error`,
+                  ``,
+                  `---`,
+                  `> Generado automáticamente por el **planning-subagent** 🤖`,
+                ].join('\n'),
+              },
+              {
+                title: `[Docs] Documentar uso y pruebas manuales`,
+                body: [
+                  `## 📄 Actividad: Documentación`,
+                  ``,
+                  parentRef,
+                  ``,
+                  `### Tareas`,
+                  `- [ ] Actualizar \`README.md\` con instrucciones de instalación y ejecución`,
+                  `- [ ] Documentar el endpoint o interfaz con ejemplos de uso`,
+                  `- [ ] Verificar el comportamiento manualmente y registrar el resultado esperado`,
+                  ``,
+                  `---`,
+                  `> Generado automáticamente por el **planning-subagent** 🤖`,
+                ].join('\n'),
+              },
+            ];
+
+            // ─── Crear cada sub-issue en el repositorio ────────────────────────────
+            const createdIssues = [];
+            for (const subIssue of subIssues) {
+              const created = await github.rest.issues.create({
+                owner,
+                repo,
+                title: subIssue.title,
+                body: subIssue.body,
+                labels: ['sub-issue'],
+              });
+              createdIssues.push(created.data);
+              core.info(`Sub-issue creado: #${created.data.number} — ${subIssue.title}`);
+            }
+
+            // ─── Publicar comentario resumen en el issue padre ─────────────────────
+            const subIssueList = createdIssues
+              .map((i) => `- #${i.number} — ${i.title}`)
+              .join('\n');
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: parentNumber,
+              body: [
+                `## 🗺️ Planning Subagent — Roadmap de Actividades`,
+                ``,
+                `El **planning-subagent** ha analizado el issue y generado las siguientes sub-issues de desarrollo:`,
+                ``,
+                subIssueList,
+                ``,
+                `> Cada sub-issue contiene las tareas específicas necesarias para completar esta actividad.`,
+              ].join('\n'),
+            });
