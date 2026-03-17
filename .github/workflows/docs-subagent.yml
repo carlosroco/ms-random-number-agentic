@@ -1,0 +1,124 @@
+name: Docs Subagent — Technical Documentation
+
+# Skill: technical-documentation
+# Handles sub-issues: [Docs]
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  issues: write
+
+jobs:
+  docs-subagent:
+    name: Docs Subagent - Technical Documentation
+    runs-on: ubuntu-latest
+    if: |
+      github.event.label.name == 'sub-issue' &&
+      startsWith(github.event.issue.title, '[Docs]')
+
+    steps:
+      - name: Generar documentación README
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+            const issueNumber = issue.number;
+            const issueBody = issue.body || '';
+            const { owner, repo } = context.repo;
+
+            // ─── Asignar el issue a Copilot ──────────────────────────────────────────
+            await github.rest.issues.addAssignees({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              assignees: ['Copilot'],
+            });
+            core.info(`Issue #${issueNumber} asignado a Copilot`);
+
+            // ─── Leer contexto del issue padre desde el body ─────────────────────────
+            // Busca la línea: "**Issue padre:** #N — título"
+            const parentRefMatch = issueBody.match(/\*\*Issue padre:\*\* #(\d+) — (.+)/);
+            const parentNumber = parentRefMatch ? parentRefMatch[1] : 'N/A';
+            const parentTitle = parentRefMatch ? parentRefMatch[2].trim() : 'Microservicio Random Number';
+
+            // ─── Skill: technical-documentation — Generar README.md ─────────────────
+            const readmeContent = [
+              `# ms-random-number`,
+              ``,
+              `Microservicio Spring Boot que expone un endpoint REST para obtener un número aleatorio entre 1 y 9.`,
+              ``,
+              `## Tecnologías`,
+              ``,
+              `- Java 17`,
+              `- Spring Boot 3.x`,
+              `- Maven`,
+              ``,
+              `## Endpoint`,
+              ``,
+              `\`\`\``,
+              `GET /api/random`,
+              `Response: {"number": N}  donde N es un entero entre 1 y 9`,
+              `\`\`\``,
+              ``,
+              `## Cómo ejecutar`,
+              ``,
+              `\`\`\`bash`,
+              `./mvnw spring-boot:run`,
+              `\`\`\``,
+              ``,
+              `## Ejemplo con curl`,
+              ``,
+              `\`\`\`bash`,
+              `curl http://localhost:8080/api/random`,
+              `# {"number": 7}`,
+              `\`\`\``,
+              ``,
+              `## Tests`,
+              ``,
+              `\`\`\`bash`,
+              `./mvnw test`,
+              `\`\`\``,
+            ].join('\n');
+
+            const commentBody = [
+              `## 📄 Docs Subagent — Technical Documentation`,
+              ``,
+              `**Skill:** \`technical-documentation\` | **Tarea:** \`[Docs]\``,
+              ``,
+              `He analizado el issue y genero la documentación del microservicio. 📝`,
+              ``,
+              parentRefMatch ? `> 📌 Issue padre: #${parentNumber} — ${parentTitle}` : '',
+              ``,
+              `---`,
+              ``,
+              `### 📄 \`README.md\``,
+              ``,
+              '```markdown',
+              readmeContent,
+              '```',
+              ``,
+              `---`,
+              ``,
+              `> 🤖 Generado automáticamente por el **docs-subagent** con skill \`technical-documentation\``,
+            ].join('\n');
+
+            // ─── Publicar comentario con la documentación generada ───────────────────
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              body: commentBody,
+            });
+            core.info(`Comentario publicado en el issue #${issueNumber}`);
+
+            // ─── Agregar label "in-progress" ─────────────────────────────────────────
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: issueNumber,
+              labels: ['in-progress'],
+            });
+            core.info(`Label "in-progress" agregado al issue #${issueNumber}`);
