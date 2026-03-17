@@ -1,5 +1,5 @@
 ---
-name: Conductor
+name: conductor
 description: Orquestador principal que resuelve Issues de principio a fin coordinando la planificación y la ejecución automática.
 ---
 
