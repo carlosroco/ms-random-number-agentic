@@ -13,7 +13,7 @@
     <artifactId>ms-random-number</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>ms-random-number</name>
-    <description>Microservicio de número aleatorio</description>
+    <description>Random number microservice</description>
     <properties>
         <java.version>17</java.version>
     </properties>

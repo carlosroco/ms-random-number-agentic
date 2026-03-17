@@ -7,8 +7,8 @@ import java.util.concurrent.ThreadLocalRandom;
 public class RandomNumberService {
 
     /**
-     * Retorna un número aleatorio entre 1 y 9 (inclusive).
-     * Usa ThreadLocalRandom para mayor rendimiento y seguridad en entornos concurrentes.
+     * Returns a random number between 1 and 9 (inclusive).
+     * Uses ThreadLocalRandom for better performance and safety in concurrent environments.
      */
     public int getRandomNumber() {
         return ThreadLocalRandom.current().nextInt(1, 10);
