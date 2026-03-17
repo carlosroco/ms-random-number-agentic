@@ -13,6 +13,9 @@ Cuando recibas un Issue o tarea, ejecuta estas fases secuencialmente sin detener
 ### Fase 1: Planificación (vía @planning-subagent)
 - Analiza el Issue y genera un **Roadmap Técnico** en español.
 - Identifica archivos afectados y la lógica necesaria.
+- Invoca al **@planning-subagent** para crear sub-issues nativas en GitHub usando la API de Sub-Issues:
+  - `POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues` con `{ "sub_issue_id": <id_interno> }`
+  - El issue padre es el issue que fue asignado al conductor.
 - Presenta el plan como encabezado de tu respuesta.
 
 ### Fase 2: Implementación (vía @implementation-subagent)
