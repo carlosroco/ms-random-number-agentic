@@ -122,7 +122,7 @@ jobs:
               },
             ];
 
-            // ─── Crear cada sub-issue en el repositorio ────────────────────────────
+            // ─── Crear cada sub-issue y enlazarlo como hijo del issue padre ──────────
             const createdIssues = [];
             for (const subIssue of subIssues) {
               const created = await github.rest.issues.create({
@@ -134,6 +134,19 @@ jobs:
               });
               createdIssues.push(created.data);
               core.info(`Sub-issue creado: #${created.data.number} — ${subIssue.title}`);
+
+              // ─── Establecer la relación parent-child vía la API de Sub-Issues ──────
+              try {
+                await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues', {
+                  owner,
+                  repo,
+                  issue_number: parentNumber,
+                  sub_issue_number: created.data.number,
+                });
+                core.info(`Relación padre-hijo establecida: #${parentNumber} → #${created.data.number}`);
+              } catch (err) {
+                core.warning(`No se pudo establecer la relación padre-hijo para #${created.data.number}: ${err.message}`);
+              }
             }
 
             // ─── Publicar comentario resumen en el issue padre ─────────────────────
