@@ -31,7 +31,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const skill = require('./.github/skills/java-springboot.skill.js');
+            const fs = require('fs');
 
             const issue = context.payload.issue;
             const issueNumber = issue.number;
@@ -47,16 +47,37 @@ jobs:
             });
             core.info(`Issue #${issueNumber} asignado a Copilot`);
 
-            // ─── Detectar el tipo de tarea por prefijo del título ────────────────────
-            let commentBody = '';
+            // ─── Leer SKILL.md y extraer la sección correspondiente ──────────────────
+            const skillContent = fs.readFileSync('./.github/skills/java-springboot/SKILL.md', 'utf8');
+            // Strip YAML frontmatter (content between first two '---' lines)
+            const bodyMatch = skillContent.match(/^---[\s\S]*?---\n([\s\S]*)$/);
+            const skillBody = bodyMatch ? bodyMatch[1].trim() : skillContent;
 
-            if (issueTitle.startsWith('[Setup]')) {
-              commentBody = skill.setup(issueTitle);
-            } else if (issueTitle.startsWith('[Service]')) {
-              commentBody = skill.service(issueTitle);
-            } else if (issueTitle.startsWith('[Controller]')) {
-              commentBody = skill.controller(issueTitle);
+            // Detect task type and extract matching section (## [Setup], ## [Service], ## [Controller])
+            let taskName = '';
+            let taskPrefix = '';
+            if (issueTitle.startsWith('[Setup]')) { taskName = 'Setup'; taskPrefix = '[Setup]'; }
+            else if (issueTitle.startsWith('[Service]')) { taskName = 'Service'; taskPrefix = '[Service]'; }
+            else if (issueTitle.startsWith('[Controller]')) { taskName = 'Controller'; taskPrefix = '[Controller]'; }
+
+            let commentBody = '';
+            if (taskName) {
+              const sectionRegex = new RegExp(`(## \\[${taskName}\\][\\s\\S]*?)(?=\\n## \\[|\\n*$)`);
+              const sectionMatch = skillBody.match(sectionRegex);
+              commentBody = sectionMatch ? sectionMatch[1].trim() : skillBody;
+            } else {
+              commentBody = skillBody;
             }
+
+            commentBody = [
+              `## ☕ Dev Subagent — Java Spring Boot`,
+              ``,
+              `**Skill:** \`java-springboot\` | **Tarea:** \`${taskPrefix || issueTitle}\``,
+              ``,
+              commentBody,
+              ``,
+              `> 🤖 Generado automáticamente por el **dev-subagent** con skill \`java-springboot\``,
+            ].join('\n');
 
             // ─── Publicar comentario con el código generado ──────────────────────────
             await github.rest.issues.createComment({

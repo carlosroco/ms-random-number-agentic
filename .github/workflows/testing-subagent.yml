@@ -27,7 +27,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const skill = require('./.github/skills/java-testing-junit5.skill.js');
+            const fs = require('fs');
 
             const issue = context.payload.issue;
             const issueNumber = issue.number;
@@ -43,8 +43,25 @@ jobs:
             });
             core.info(`Issue #${issueNumber} asignado a Copilot`);
 
+            // ─── Leer SKILL.md y extraer el cuerpo (sin frontmatter YAML) ────────────
+            const skillContent = fs.readFileSync('./.github/skills/java-testing-junit5/SKILL.md', 'utf8');
+            const bodyMatch = skillContent.match(/^---[\s\S]*?---\n([\s\S]*)$/);
+            const skillBody = bodyMatch ? bodyMatch[1].trim() : skillContent;
+
             // ─── Skill: java-testing-junit5 ──────────────────────────────────────────
-            const commentBody = skill.generateTests(issueTitle);
+            const commentBody = [
+              `## 🧪 Testing Subagent — JUnit 5`,
+              ``,
+              `**Skill:** \`java-testing-junit5\` | **Tarea:** \`[Tests]\``,
+              ``,
+              `He analizado el issue y genero los tests unitarios y de integración. ✅`,
+              ``,
+              `---`,
+              ``,
+              skillBody,
+              ``,
+              `> 🤖 Generado automáticamente por el **testing-subagent** con skill \`java-testing-junit5\``,
+            ].join('\n');
 
             // ─── Publicar comentario con el código generado ──────────────────────────
             await github.rest.issues.createComment({

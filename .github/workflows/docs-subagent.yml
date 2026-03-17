@@ -27,7 +27,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const skill = require('./.github/skills/technical-documentation.skill.js');
+            const fs = require('fs');
 
             const issue = context.payload.issue;
             const issueNumber = issue.number;
@@ -48,8 +48,27 @@ jobs:
             const parentRefMatch = issueBody.match(/\*\*Issue padre:\*\* #(\d+) — (.+)/);
             const parentTitle = parentRefMatch ? parentRefMatch[2].trim() : null;
 
+            // ─── Leer SKILL.md y extraer el cuerpo (sin frontmatter YAML) ────────────
+            const skillContent = fs.readFileSync('./.github/skills/technical-documentation/SKILL.md', 'utf8');
+            const bodyMatch = skillContent.match(/^---[\s\S]*?---\n([\s\S]*)$/);
+            const skillBody = bodyMatch ? bodyMatch[1].trim() : skillContent;
+
             // ─── Skill: technical-documentation — Generar README.md ─────────────────
-            const commentBody = skill.generateReadme(parentTitle);
+            const commentBody = [
+              `## 📄 Docs Subagent — Technical Documentation`,
+              ``,
+              `**Skill:** \`technical-documentation\` | **Tarea:** \`[Docs]\``,
+              ``,
+              `He analizado el issue y genero la documentación del microservicio. 📝`,
+              ``,
+              parentTitle ? `> 📌 Issue padre: ${parentTitle}` : '',
+              ``,
+              `---`,
+              ``,
+              skillBody,
+              ``,
+              `> 🤖 Generado automáticamente por el **docs-subagent** con skill \`technical-documentation\``,
+            ].join('\n');
 
             // ─── Publicar comentario con la documentación generada ───────────────────
             await github.rest.issues.createComment({
