@@ -31,9 +31,10 @@ Cuando el flujo sea iniciado por el conductor (asignación a Copilot), genera su
 | `[Docs]` | Documentación y pruebas manuales |
 
 Cada sub-issue debe:
-- Referenciar el issue padre con `#número`
+- Referenciar el issue padre con `#número` en el cuerpo
 - Incluir tareas específicas con checkboxes `- [ ]`
 - Usar la etiqueta `sub-issue`
+- Establecer la relación jerárquica padre-hijo usando la API de Sub-Issues de GitHub (`POST /repos/{owner}/{repo}/issues/{issue_number}/sub_issues`) apuntando al issue asignado al conductor como padre
 
 ## 🚫 Restricción
 - No escribas código final, solo la lógica y estructura en español.
