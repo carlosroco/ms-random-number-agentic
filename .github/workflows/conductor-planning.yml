@@ -15,10 +15,12 @@ jobs:
       contains(
         fromJson('["copilot", "copilot[bot]", "github-copilot[bot]", "github-copilot", "Copilot"]'),
         github.event.assignee.login
-      )
+      ) &&
+      !contains(github.event.issue.labels.*.name, 'sub-issue')
 
     steps:
-      - name: Generar sub-issues con el planning-subagent
+      - name: "Step 1 — Planning Subagent: Crear sub-issues (sin asignar)"
+        id: planning
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -38,7 +40,7 @@ jobs:
             ].join('\n');
 
             // ─── Definición de sub-issues por el planning-subagent ───────────────────
-            // dev: true  → se asignará a Copilot (@dev-subagent)
+            // dev: true  → el conductor lo asignará a Copilot (@dev-subagent)
             // dev: false → solo se crea, no se aborda
             const subIssues = [
               {
@@ -128,7 +130,7 @@ jobs:
               },
             ];
 
-            // ─── Crear cada sub-issue, enlazarlo y asignar los de desarrollo ──────────
+            // ─── Crear cada sub-issue y enlazarlo al padre (sin asignar) ─────────────
             const createdIssues = [];
             for (const subIssue of subIssues) {
               const created = await github.rest.issues.create({
@@ -138,7 +140,7 @@ jobs:
                 body: subIssue.body,
                 labels: ['sub-issue'],
               });
-              createdIssues.push({ ...created.data, dev: subIssue.dev });
+              createdIssues.push({ number: created.data.number, title: subIssue.title, dev: subIssue.dev });
               core.info(`Sub-issue creado: #${created.data.number} — ${subIssue.title}`);
 
               // ─── Relación padre-hijo nativa ───────────────────────────────────────
@@ -153,24 +155,42 @@ jobs:
               } catch (err) {
                 core.warning(`No se pudo establecer la relación padre-hijo para #${created.data.number}: ${err.message}`);
               }
+            }
 
-              // ─── Asignar a Copilot solo los sub-issues de desarrollo ──────────────
-              if (subIssue.dev) {
-                try {
-                  await github.rest.issues.addAssignees({
-                    owner,
-                    repo,
-                    issue_number: created.data.number,
-                    assignees: ['copilot'],
-                  });
-                  core.info(`Sub-issue #${created.data.number} asignado a Copilot (@dev-subagent)`);
-                } catch (err) {
-                  core.error(`ERROR al asignar Copilot al sub-issue #${created.data.number}: ${err.message}`);
-                  core.error(`Status: ${err.status ?? 'N/A'} | Response: ${JSON.stringify(err.response?.data || {})}`);
-                  core.setFailed(`No se pudo asignar Copilot al sub-issue #${created.data.number}: ${err.message}`);
-                }
-              } else {
-                core.info(`Sub-issue #${created.data.number} NO asignado (${subIssue.title} — fuera del scope de desarrollo)`);
+            // ─── Pasar números de sub-issues de dev al siguiente step ────────────────
+            const devNumbers = createdIssues.filter(i => i.dev === true).map(i => i.number);
+            core.setOutput('dev_issue_numbers', JSON.stringify(devNumbers));
+            core.setOutput('created_issues', JSON.stringify(createdIssues));
+            core.info(`Sub-issues de dev para asignar: ${devNumbers.join(', ')}`);
+
+      - name: "Step 2 — Conductor: Asignar sub-issues de dev a Copilot"
+        uses: actions/github-script@v7
+        env:
+          DEV_ISSUE_NUMBERS: ${{ steps.planning.outputs.dev_issue_numbers }}
+          CREATED_ISSUES: ${{ steps.planning.outputs.created_issues }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const parentNumber = context.payload.issue.number;
+
+            const devNumbers = JSON.parse(process.env.DEV_ISSUE_NUMBERS || '[]');
+            const createdIssues = JSON.parse(process.env.CREATED_ISSUES || '[]');
+
+            // ─── Asignar a Copilot solo los sub-issues de desarrollo ──────────────
+            for (const issueNumber of devNumbers) {
+              try {
+                await github.rest.issues.addAssignees({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  assignees: ['copilot'],
+                });
+                core.info(`Sub-issue #${issueNumber} asignado a Copilot (@dev-subagent)`);
+              } catch (err) {
+                core.error(`ERROR al asignar Copilot al sub-issue #${issueNumber}: ${err.message}`);
+                core.error(`Status: ${err.status ?? 'N/A'} | Response: ${JSON.stringify(err.response?.data || {})}`);
+                core.setFailed(`No se pudo asignar Copilot al sub-issue #${issueNumber}: ${err.message}`);
               }
             }
 
@@ -188,8 +208,8 @@ jobs:
               body: [
                 `## 🗺️ Planning Subagent — Roadmap de Actividades`,
                 ``,
-                `El **@planning-subagent** ha analizado el issue y generado las sub-issues de desarrollo.`,
-                `El **@conductor** ha delegado las tareas de implementación al **@dev-subagent**.`,
+                `El **@planning-subagent** ha analizado el issue y creado los sub-issues.`,
+                `El **@conductor** ha asignado los sub-issues de desarrollo al **@dev-subagent**.`,
                 ``,
                 `### ☕ Sub-issues de Desarrollo (asignadas a @dev-subagent)`,
                 devList,
