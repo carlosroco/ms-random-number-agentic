@@ -165,7 +165,9 @@ jobs:
                   });
                   core.info(`Sub-issue #${created.data.number} asignado a Copilot (@dev-subagent)`);
                 } catch (err) {
-                  core.warning(`No se pudo asignar Copilot al sub-issue #${created.data.number}: ${err.message}`);
+                  core.error(`ERROR al asignar Copilot al sub-issue #${created.data.number}: ${err.message}`);
+                  core.error(`Status: ${err.status ?? 'N/A'} | Response: ${JSON.stringify(err.response?.data || {})}`);
+                  core.setFailed(`No se pudo asignar Copilot al sub-issue #${created.data.number}: ${err.message}`);
                 }
               } else {
                 core.info(`Sub-issue #${created.data.number} NO asignado (${subIssue.title} — fuera del scope de desarrollo)`);

@@ -42,6 +42,8 @@ jobs:
             const issueTitle = issue.title;
             const { owner, repo } = context.repo;
 
+            core.info(`=== @dev-subagent procesando sub-issue #${issueNumber}: ${issueTitle} ===`);
+
             // ─── Leer SKILL.md de java-springboot ────────────────────────────────────
             const skillContent = fs.readFileSync('./.github/skills/java-springboot/SKILL.md', 'utf8');
             const bodyMatch = skillContent.match(/^---[\s\S]*?---\n([\s\S]*)$/);
@@ -84,10 +86,14 @@ jobs:
             core.info(`Comentario publicado en el sub-issue #${issueNumber}`);
 
             // ─── Agregar label "in-progress" ──────────────────────────────────────────
-            await github.rest.issues.addLabels({
-              owner,
-              repo,
-              issue_number: issueNumber,
-              labels: ['in-progress'],
-            });
-            core.info(`Label "in-progress" agregado al sub-issue #${issueNumber}`);
+            try {
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: issueNumber,
+                labels: ['in-progress'],
+              });
+              core.info(`Label "in-progress" agregado al sub-issue #${issueNumber}`);
+            } catch (err) {
+              core.warning(`No se pudo agregar label "in-progress" al sub-issue #${issueNumber}: ${err.message}`);
+            }
