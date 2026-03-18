@@ -1,0 +1,4 @@
+com/carlosroco/msrandomnumber/controller/RandomNumberController.class
+com/carlosroco/msrandomnumber/MsRandomNumberApplication.class
+com/carlosroco/msrandomnumber/service/impl/RandomNumberServiceImpl.class
+com/carlosroco/msrandomnumber/service/RandomNumberService.class
