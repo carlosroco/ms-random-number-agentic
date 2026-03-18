@@ -10,6 +10,8 @@ on:
 
 permissions:
   issues: write
+  contents: write
+  pull-requests: write
 
 jobs:
   dev-subagent-springboot:
@@ -58,7 +60,7 @@ jobs:
 
             let commentBody = skillBody;
             if (taskName) {
-              const sectionRegex = new RegExp(`(## \\[${taskName}\\][\\s\\S]*?)(?=\\n## \\[|\\n*$)`);
+              const sectionRegex = new RegExp(`(## \[${taskName}\][\s\S]*?)(?=\n## \[|\n*$)`);
               const sectionMatch = skillBody.match(sectionRegex);
               if (sectionMatch) commentBody = sectionMatch[1].trim();
             }
@@ -97,3 +99,5 @@ jobs:
             } catch (err) {
               core.warning(`No se pudo agregar label "in-progress" al sub-issue #${issueNumber}: ${err.message}`);
             }
+          
+Commit message: "fix: add contents and pull-requests write permissions to dev-subagent workflow"
