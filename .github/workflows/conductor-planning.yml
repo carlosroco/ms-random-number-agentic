@@ -6,6 +6,8 @@ on:
 
 permissions:
   issues: write
+  contents: write
+  pull-requests: write
 
 jobs:
   invoke-planning-subagent:
@@ -120,7 +122,8 @@ jobs:
                   parentRef,
                   ``,
                   `### Tareas`,
-                  `- [ ] Actualizar \`README.md\` con instrucciones de instalación y ejecución`,
+                  `- [ ] Actualizar \
+README.md\ con instrucciones de instalación y ejecución`,
                   `- [ ] Documentar el endpoint o interfaz con ejemplos de uso`,
                   `- [ ] Verificar el comportamiento manualmente y registrar el resultado esperado`,
                   ``,
@@ -217,6 +220,7 @@ jobs:
                 `### ⏸️ Sub-issues fuera de scope (no abordadas)`,
                 pendingList,
                 ``,
-                `> Cada sub-issue de desarrollo será implementada por el **@dev-subagent** usando el skill \`java-springboot\`.`,
+                `> Cada sub-issue de desarrollo será implementada por el **@dev-subagent** usando el skill \
+`java-springboot\`.`,
               ].join('\n'),
             });
