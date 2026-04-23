@@ -1,0 +1,14 @@
+# Directorio de compilación Maven (no se versiona)
+target/
+
+# Archivos de IDE
+.idea/
+*.iml
+.vscode/
+*.classpath
+*.project
+.settings/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
