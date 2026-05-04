@@ -1,0 +1,18 @@
+# Archivos compilados y artefactos de Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+
+# Archivos de IDE
+.idea/
+*.iml
+.eclipse
+.classpath
+.project
+.settings/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
